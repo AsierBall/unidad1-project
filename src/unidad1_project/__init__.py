@@ -1,5 +1,5 @@
-from .readers import hello_from_reader
+from .readers import CSVReader
 
 __all__ = [
-    "hello_from_reader",
+    "CSVReader",
 ]
