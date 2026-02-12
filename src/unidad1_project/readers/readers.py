@@ -1,26 +1,16 @@
-from abc import ABC, abstractmethod
 import csv
 from pathlib import Path
-from typing import Iterator
-
+from typing import Generator, Protocol
 import pandas as pd
 
+class Reader(Protocol):
+    def read(self) -> Generator: ...
 
-class Reader(ABC):
+class CSVReader(Reader):
 
-    
-
-    @abstractmethod
-    def read(self) -> Iterator:
-        pass
-
-
-
-
-class CSVReader():
-
-    def __init__(self, file: Path):
-        self._file_path = file
+    def __init__(self, file_path: Path, chunk_size: int):
+        self._file_path = file_path
+        self._chunk_size = chunk_size
 
     def _detect_delimiter(self):
         with open(self._file_path, newline='', encoding='utf-8') as f:
@@ -31,7 +21,7 @@ class CSVReader():
             return delimiter
 
 
-    def read(self):
+    def read(self) -> Generator:
         # if not self._file_path.is_file():
         #     raise TypeError("Debe ser un archivo")
         # if self._file_path.suffix.lower() == ".csv":
@@ -45,8 +35,34 @@ class CSVReader():
         print("delimiter", delimiter)
         with open(self._file_path, newline='', encoding='utf-8') as f:
             lector = csv.DictReader(f, delimiter=delimiter)
-            # Opcional: saltar la cabecera
-            # next(lector)
-            for fila in lector:
-                yield fila
+            while lector:
+                # init chunk
+                chunk = []
+                chunk_size = 0
+                # read chunk
+                while chunk_size < self._chunk_size:
+                    chunk.append(next(lector))
+                    chunk_size += 1
 
+                yield chunk
+
+class CSVReaderPandas(Reader):
+
+    def __init__(self, file_path: Path, chunk_size: int):
+        self._file_path = file_path
+        self._chunk_size = chunk_size
+
+    def _detect_delimiter(self):
+        with open(self._file_path, newline='', encoding='utf-8') as f:
+            sample = f.read(100)
+            sniffer = csv.Sniffer()
+            dialect = sniffer.sniff(sample)
+            delimiter = dialect.delimiter
+            return delimiter
+
+
+    def read(self) -> Generator:
+        delimiter = self._detect_delimiter()
+        lector = pd.read_csv(self._file_path, chunksize=self._chunk_size, sep=delimiter)
+        for chunk in lector:
+            yield chunk
