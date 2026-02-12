@@ -1,5 +1,6 @@
-from .transformers import TransformerMissing
+from .transformers import TransformerMissing, Transformer
 
 __all__ = [
-    "TransformerMissing"
+    "TransformerMissing",
+    "Transformer",
 ]
