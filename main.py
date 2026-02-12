@@ -1,5 +1,5 @@
 from pathlib import Path
-from unidad1_project import CSVReader,CSVReaderPandas, TransformerMissing, WriterCsv
+from unidad1_project import CSVReader, CSVReaderPandas, TransformerMissing, WriterCsv, Orchestrator
 
 
 def main():
@@ -7,13 +7,22 @@ def main():
     file_path = Path("./data/netflix_titles.csv")
     file_path_wr = Path("./data/netflix_titles_wr.csv")
     reader = CSVReaderPandas(file_path, 5)
-    reader_generator = reader.read()
+    # reader = CSVReader(fil_path, 5)
+    transformer = TransformerMissing()
+    # reader_generator = reader.read()
     # print(type(next(reader_generator)))
     # print([next(reader_generator) for _ in range(3)])
     # transformer = TransformerMissing(reader_generator)
     # transformer.transform()
     writer = WriterCsv(file_path_wr)
-    writer.write(next(reader_generator))
+    # writer.write(next(reader_generator))
+    orchestrator = Orchestrator(
+        reader=reader,
+        transformer=transformer,
+        writer=writer
+        )
+
+    orchestrator.run()
 
 
 if __name__ == "__main__":
