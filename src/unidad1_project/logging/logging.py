@@ -2,6 +2,7 @@ from logging import basicConfig, FileHandler, StreamHandler
 from pathlib import Path
 
 
+# TODO: revisar configuracion y uso dentro de las clases
 class PipelineLogger():
     def __init__(self, log_file: Path, numeric_level, log_format):
         # Configure root logger to output to both file and stream

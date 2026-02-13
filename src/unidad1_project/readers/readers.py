@@ -3,10 +3,15 @@ from pathlib import Path
 from typing import Generator, Protocol
 import pandas as pd
 
+# TODO: añadir lector para json (puede cargarlo todo de una)
+# TODO: testing de las clases
+
+
 class Reader(Protocol):
     def read(self) -> Generator: ...
 
 class CSVReader(Reader):
+    # TODO: si da tiempo completar esta version sin pandas
 
     def __init__(self, file_path: Path, chunk_size: int):
         self._file_path = file_path
@@ -47,7 +52,7 @@ class CSVReader(Reader):
                 yield chunk
 
 class CSVReaderPandas(Reader):
-
+    # TODO: gestion de errores y documentacion
     def __init__(self, file_path: Path, chunk_size: int):
         self._file_path = file_path
         self._chunk_size = chunk_size

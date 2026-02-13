@@ -2,6 +2,7 @@ from ..readers import Reader
 from ..transformers import Transformer
 from ..writers import Writer
 
+#TODO: transformer a lista de transformers antes de guardar
 class Orchestrator():
     def __init__(self, reader: Reader, transformer: Transformer, writer: Writer):
         self._reader = reader

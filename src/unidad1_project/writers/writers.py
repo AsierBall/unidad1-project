@@ -2,6 +2,10 @@ from pathlib import Path
 from typing import Protocol
 from pandas import DataFrame
 
+# TODO: writer a formato comprimido `parquet`
+# TODO: writer a formato comprimido `excel` ????
+# TODO: writer a `json`
+
 class Writer(Protocol):
     def write(self, data_frame: DataFrame) -> None: ...
 
