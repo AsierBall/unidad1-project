@@ -83,7 +83,7 @@ class TestJsonWriter:
         """
         Test that the JSON Lines file is created if it does not exist.
         """
-        file_path = tmp_path / "output.jsonl"
+        file_path = tmp_path / "output.json"
         writer = WriterJson()
 
         df = pd.DataFrame({"name": ["Alice"], "age": [30]})
@@ -97,7 +97,7 @@ class TestJsonWriter:
         """
         Test that the parent directories are created if they do not exist.
         """
-        nested_path = tmp_path / "folder" / "output.jsonl"
+        nested_path = tmp_path / "folder" / "output.json"
         writer = WriterJson()
 
         df = pd.DataFrame({"name": ["Alice"], "age": [30]})
@@ -110,7 +110,7 @@ class TestJsonWriter:
         """
         Test that multiple writes append rows correctly in JSON Lines format.
         """
-        file_path = tmp_path / "output.jsonl"
+        file_path = tmp_path / "output.json"
         writer = WriterJson()
 
         df1 = pd.DataFrame({"name": ["Alice"], "age": [30]})
@@ -135,7 +135,7 @@ class TestJsonWriter:
         Verify that a ValueError is raised when attempting to append
         a DataFrame with columns that do not match the existing file.
         """
-        file_path = tmp_path / "output.jsonl"
+        file_path = tmp_path / "output.json"
         writer = WriterJson()
 
         df_initial = pd.DataFrame({"name": ["Alice"], "age": [30]})
