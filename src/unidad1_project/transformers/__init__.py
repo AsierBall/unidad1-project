@@ -3,7 +3,11 @@ from .transformers import (Transformer,
     TransformerMissingThreshold,
     TransformerNormalizeStrings,
     TransformerImputeMissingsNumeric,
-    TransformerImputeMissingsString)
+    TransformerImputeMissingsString,
+    TransformerFilterRows,
+    TransformerSelectColumns,
+    TransformerGroupByAggregate,
+    )
 
 __all__ = [
     "TransformerMissing",
@@ -12,4 +16,7 @@ __all__ = [
     "TransformerNormalizeStrings",
     "TransformerImputeMissingsNumeric",
     "TransformerImputeMissingsString",
+    "TransformerFilterRows",
+    "TransformerSelectColumns",
+    "TransformerGroupByAggregate",
 ]

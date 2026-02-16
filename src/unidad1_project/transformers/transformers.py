@@ -1,4 +1,4 @@
-from typing import Protocol, Any
+from typing import Dict, Protocol, Any, Callable, List, Union
 import pandas as pd
 from ..logging import get_logger
 
@@ -362,4 +362,319 @@ class TransformerImputeMissingsString(Transformer):
                 f"TransformerImputeMissingsString: Error during imputation with "
                 f"strategy '{self._strategy}'"
             )
+            raise
+
+class TransformerFilterRows(Transformer):
+    """
+    Transformer that filters rows based on a condition.
+
+    Supports filtering by column values using various operators or
+    a custom callable condition.
+    """
+
+    def __init__(
+        self,
+        column: str = None,
+        operator: str = None,
+        value: Any = None,
+        condition: Callable[[pd.DataFrame], pd.Series] = None
+    ):
+        """
+        Initialize the row filter transformer.
+
+        :param column: Column name to filter on (required if using operator)
+        :type column: str
+        :param operator: Comparison operator ('==', '!=', '>', '<', '>=', '<=', 'in', 'not_in', 'contains')
+        :type operator: str
+        :param value: Value to compare against
+        :type value: Any
+        :param condition: Custom callable that takes DataFrame and returns boolean Series
+        :type condition: Callable[[pd.DataFrame], pd.Series]
+        :raises ValueError: If neither operator nor condition is provided
+        """
+        self._column = column
+        self._operator = operator
+        self._value = value
+        self._condition = condition
+
+        logger.debug(
+            f"TransformerFilterRows initialized with column='{column}', "
+            f"operator='{operator}', value={value}, "
+            f"custom_condition={condition is not None}"
+        )
+
+        if condition is None and operator is None:
+            logger.error("TransformerFilterRows: Must provide either operator or condition")
+            raise ValueError("Must provide either operator or condition")
+
+        if operator is not None and column is None:
+            logger.error("TransformerFilterRows: Column must be specified when using operator")
+            raise ValueError("Column must be specified when using operator")
+
+        valid_operators = ['==', '!=', '>', '<', '>=', '<=', 'in', 'not_in', 'contains']
+        if operator is not None and operator not in valid_operators:
+            logger.error(
+                f"TransformerFilterRows: Invalid operator '{operator}'. "
+                f"Valid options: {valid_operators}"
+            )
+            raise ValueError(f"Invalid operator. Valid options: {valid_operators}")
+    def transform(self, data: pd.DataFrame) -> pd.DataFrame:
+        """
+        Filter rows based on the specified condition.
+
+        :param data: DataFrame to filter
+        :type data: pd.DataFrame
+        :return: Filtered DataFrame
+        :rtype: pd.DataFrame
+        :raises ValueError: If column doesn't exist or condition fails
+        """
+        initial_rows = len(data)
+        logger.debug(f"TransformerFilterRows: Processing DataFrame with shape {data.shape}")
+
+        try:
+            if self._condition is not None:
+                logger.info("TransformerFilterRows: Applying custom condition")
+                mask = self._condition(data)
+            else:
+                if self._column not in data.columns:
+                    logger.error(f"TransformerFilterRows: Column '{self._column}' not found")
+                    raise ValueError(f"Column '{self._column}' not found in DataFrame")
+
+                logger.info(
+                    f"TransformerFilterRows: Filtering column '{self._column}' "
+                    f"with operator '{self._operator}'"
+                )
+
+                if self._operator == '==':
+                    mask = data[self._column] == self._value
+                elif self._operator == '!=':
+                    mask = data[self._column] != self._value
+                elif self._operator == '>':
+                    mask = data[self._column] > self._value
+                elif self._operator == '<':
+                    mask = data[self._column] < self._value
+                elif self._operator == '>=':
+                    mask = data[self._column] >= self._value
+                elif self._operator == '<=':
+                    mask = data[self._column] <= self._value
+                elif self._operator == 'in':
+                    mask = data[self._column].isin(self._value)
+                elif self._operator == 'not_in':
+                    mask = ~data[self._column].isin(self._value)
+                elif self._operator == 'contains':
+                    mask = data[self._column].str.contains(self._value, na=False)
+
+            result = data[mask]
+            removed_rows = initial_rows - len(result)
+
+            logger.info(
+                f"TransformerFilterRows: Kept {len(result)} rows, "
+                f"removed {removed_rows} rows ({removed_rows/initial_rows*100:.2f}%)"
+            )
+            logger.debug(f"TransformerFilterRows: Output shape {result.shape}")
+
+            return result
+
+        except Exception:
+            logger.exception("TransformerFilterRows: Error during filtering")
+            raise
+
+class TransformerSelectColumns(Transformer):
+    """
+    Transformer that selects specific columns from a DataFrame.
+
+    Can select columns by name, drop columns, or reorder columns.
+    """
+
+    def __init__(
+        self,
+        columns: List[str] = None,
+        drop: List[str] = None,
+        keep_order: bool = True
+    ):
+        """
+        Initialize the column selection transformer.
+
+        :param columns: List of column names to keep (mutually exclusive with drop)
+        :type columns: List[str]
+        :param drop: List of column names to drop (mutually exclusive with columns)
+        :type drop: List[str]
+        :param keep_order: Whether to maintain column order from columns list
+        :type keep_order: bool
+        :raises ValueError: If both columns and drop are specified
+        """
+        self._columns = columns
+        self._drop = drop
+        self._keep_order = keep_order
+
+        logger.debug(
+            f"TransformerSelectColumns initialized with columns={columns}, "
+            f"drop={drop}, keep_order={keep_order}"
+        )
+
+        if columns is not None and drop is not None:
+            logger.error("TransformerSelectColumns: Cannot specify both columns and drop")
+            raise ValueError("Cannot specify both 'columns' and 'drop' parameters")
+
+        if columns is None and drop is None:
+            logger.error("TransformerSelectColumns: Must specify either columns or drop")
+            raise ValueError("Must specify either 'columns' or 'drop' parameter")
+
+    def transform(self, data: pd.DataFrame) -> pd.DataFrame:
+        """
+        Select or drop specified columns.
+
+        :param data: DataFrame to process
+        :type data: pd.DataFrame
+        :return: DataFrame with selected columns
+        :rtype: pd.DataFrame
+        :raises ValueError: If specified columns don't exist
+        """
+        logger.debug(f"TransformerSelectColumns: Processing DataFrame with shape {data.shape}")
+        logger.debug(f"TransformerSelectColumns: Input columns: {list(data.columns)}")
+
+        try:
+            if self._columns is not None:
+                # Validate all columns exist
+                missing_cols = set(self._columns) - set(data.columns)
+                if missing_cols:
+                    logger.error(
+                        f"TransformerSelectColumns: Columns not found: {missing_cols}"
+                    )
+                    raise ValueError(f"Columns not found in DataFrame: {missing_cols}")
+
+                logger.info(
+                    f"TransformerSelectColumns: Selecting {len(self._columns)} columns: "
+                    f"{self._columns}"
+                )
+                result = data[self._columns]
+
+            else:  # self._drop is not None
+                # Validate columns to drop exist
+                missing_cols = set(self._drop) - set(data.columns)
+                if missing_cols:
+                    logger.warning(
+                        f"TransformerSelectColumns: Columns to drop not found: {missing_cols}"
+                    )
+
+                logger.info(
+                    f"TransformerSelectColumns: Dropping {len(self._drop)} columns: "
+                    f"{self._drop}"
+                )
+                result = data.drop(columns=self._drop, errors='ignore')
+
+            logger.info(
+                f"TransformerSelectColumns: Output has {len(result.columns)} columns"
+            )
+            logger.debug(f"TransformerSelectColumns: Output columns: {list(result.columns)}")
+            logger.debug(f"TransformerSelectColumns: Output shape {result.shape}")
+
+            return result
+
+        except Exception:
+            logger.exception("TransformerSelectColumns: Error during column selection")
+            raise
+
+class TransformerGroupByAggregate(Transformer):
+    """
+    Transformer that performs group-by aggregations.
+    
+    Groups data by specified columns and applies aggregation functions.
+    """
+
+    def __init__(
+        self,
+        group_by: Union[str, List[str]],
+        aggregations: Dict[str, Union[str, List[str]]],
+        reset_index: bool = True
+    ):
+        """
+        Initialize the group-by aggregation transformer.
+
+        :param group_by: Column(s) to group by
+        :type group_by: Union[str, List[str]]
+        :param aggregations: Dict mapping column names to aggregation function(s)
+                            Example: {'sales': 'sum', 'price': ['mean', 'max']}
+        :type aggregations: Dict[str, Union[str, List[str]]]
+        :param reset_index: Whether to reset index after groupby
+        :type reset_index: bool
+        """
+        self._group_by = [group_by] if isinstance(group_by, str) else group_by
+        self._aggregations = aggregations
+        self._reset_index = reset_index
+
+        logger.debug(
+            f"TransformerGroupByAggregate initialized with group_by={self._group_by}, "
+            f"aggregations={aggregations}, reset_index={reset_index}"
+        )
+
+        valid_agg_funcs = ['sum', 'mean', 'median', 'min', 'max', 'count', 'std', 'var', 'first', 'last']
+
+        # Validate aggregation functions
+        for col, funcs in aggregations.items():
+            func_list = [funcs] if isinstance(funcs, str) else funcs
+            invalid_funcs = set(func_list) - set(valid_agg_funcs)
+            if invalid_funcs:
+                logger.warning(
+                    f"TransformerGroupByAggregate: Potentially invalid aggregation "
+                    f"functions for column '{col}': {invalid_funcs}"
+                )
+
+    def transform(self, data: pd.DataFrame) -> pd.DataFrame:
+        """
+        Perform group-by aggregation.
+
+        :param data: DataFrame to aggregate
+        :type data: pd.DataFrame
+        :return: Aggregated DataFrame
+        :rtype: pd.DataFrame
+        :raises ValueError: If group_by columns or aggregation columns don't exist
+        """
+        initial_rows = len(data)
+        logger.debug(f"TransformerGroupByAggregate: Processing DataFrame with shape {data.shape}")
+
+        try:
+            # Validate group_by columns exist
+            missing_group_cols = set(self._group_by) - set(data.columns)
+            if missing_group_cols:
+                logger.error(
+                    f"TransformerGroupByAggregate: Group-by columns not found: {missing_group_cols}"
+                )
+                raise ValueError(f"Group-by columns not found: {missing_group_cols}")
+
+            # Validate aggregation columns exist
+            missing_agg_cols = set(self._aggregations.keys()) - set(data.columns)
+            if missing_agg_cols:
+                logger.error(
+                    f"TransformerGroupByAggregate: Aggregation columns not found: {missing_agg_cols}"
+                )
+                raise ValueError(f"Aggregation columns not found: {missing_agg_cols}")
+
+            logger.info(
+                f"TransformerGroupByAggregate: Grouping by {self._group_by} "
+                f"and aggregating {len(self._aggregations)} columns"
+            )
+
+            result = data.groupby(self._group_by).agg(self._aggregations)
+
+            if self._reset_index:
+                logger.debug("TransformerGroupByAggregate: Resetting index")
+                result = result.reset_index()
+
+            # Flatten column names if multi-level
+            if isinstance(result.columns, pd.MultiIndex):
+                logger.debug("TransformerGroupByAggregate: Flattening multi-level columns")
+                result.columns = ['_'.join(col).strip('_') for col in result.columns.values]
+
+            logger.info(
+                f"TransformerGroupByAggregate: Reduced from {initial_rows} rows "
+                f"to {len(result)} groups"
+            )
+            logger.debug(f"TransformerGroupByAggregate: Output shape {result.shape}")
+            logger.debug(f"TransformerGroupByAggregate: Output columns: {list(result.columns)}")
+
+            return result
+
+        except Exception:
+            logger.exception("TransformerGroupByAggregate: Error during aggregation")
             raise
