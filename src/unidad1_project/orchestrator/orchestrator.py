@@ -21,6 +21,7 @@ class Orchestrator():
         self._transformers = transformers
         self._writer = writer
 
+<<<<<<< Updated upstream
     def run(self, input_file_path: Path, output_file_path: Path):
         """runs the data stream from reading to writing
 
@@ -37,3 +38,9 @@ class Orchestrator():
             )
 
             self._writer.write(cleaned_chunk, output_file_path)
+=======
+    def run(self, input_path, output_path):
+        for chunk in self._reader.read(input_path):
+            cleaned_chunk = self._transformer.transform(chunk)
+            self._writer.write(cleaned_chunk, output_path)
+>>>>>>> Stashed changes
