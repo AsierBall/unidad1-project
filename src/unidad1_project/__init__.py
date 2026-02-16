@@ -10,7 +10,7 @@ from .transformers import (Transformer,
     TransformerSelectColumns,
     TransformerFilterRows,
     )
-from .writers import WriterCsv, Writer
+from .writers import WriterCsv, Writer, WriterJson
 from .orchestrator import Orchestrator
 from .logging import setup_logging
 
@@ -27,6 +27,7 @@ __all__ = [
     "TransformerMissing",
     "WriterCsv",
     "Writer",
+    "WriterJson",
     "Orchestrator",
     "Transformer",
     "TransformerMissingThreshold",
