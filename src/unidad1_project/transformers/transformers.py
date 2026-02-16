@@ -1,4 +1,4 @@
-from typing import Dict, Protocol, Any, Callable, List, Union
+from typing import Dict, Protocol, Any, Callable, List, Union, Optional
 import pandas as pd
 from ..logging import get_logger
 
@@ -98,7 +98,7 @@ class TransformerMissingThreshold(Transformer):
         """
         initial_rows = len(data)
         n_cols = len(data.columns)
-        min_non_null = self._threshold * n_cols
+        min_non_null = int(self._threshold * n_cols)
 
         logger.debug(
             f"TransformerMissingThreshold: Processing DataFrame with shape {data.shape}"
@@ -376,10 +376,10 @@ class TransformerFilterRows(Transformer):
 
     def __init__(
         self,
-        column: str = None,
-        operator: str = None,
+        column: Optional[str] = None,
+        operator: Optional[str] = None,
         value: Any = None,
-        condition: Callable[[pd.DataFrame], pd.Series] = None
+        condition: Optional[Callable[[pd.DataFrame], pd.Series]] = None
     ):
         """
         Initialize the row filter transformer.
@@ -465,8 +465,10 @@ class TransformerFilterRows(Transformer):
                     mask = ~data[self._column].isin(self._value)
                 elif self._operator == 'contains':
                     mask = data[self._column].str.contains(self._value, na=False)
+                else:
+                    raise ValueError(f"Unsupported operator {self._operator}")
 
-            result = data[mask]
+            result = data.loc[:,mask]
             removed_rows = initial_rows - len(result)
 
             logger.info(
@@ -490,8 +492,8 @@ class TransformerSelectColumns(Transformer):
 
     def __init__(
         self,
-        columns: List[str] = None,
-        drop: List[str] = None,
+        columns: Optional[List[str]] = None,
+        drop: Optional[List[str]] = None,
         keep_order: bool = True
     ):
         """
@@ -537,8 +539,9 @@ class TransformerSelectColumns(Transformer):
 
         try:
             if self._columns is not None:
+                cols = self._columns
                 # Validate all columns exist
-                missing_cols = set(self._columns) - set(data.columns)
+                missing_cols = set(cols) - set(data.columns)
                 if missing_cols:
                     logger.error(
                         f"TransformerSelectColumns: Columns not found: {missing_cols}"
@@ -546,24 +549,25 @@ class TransformerSelectColumns(Transformer):
                     raise ValueError(f"Columns not found in DataFrame: {missing_cols}")
 
                 logger.info(
-                    f"TransformerSelectColumns: Selecting {len(self._columns)} columns: "
-                    f"{self._columns}"
+                    f"TransformerSelectColumns: Selecting {len(cols)} columns: "
+                    f"{cols}"
                 )
-                result = data[self._columns]
+                result = data.loc[:, cols]
 
             else:  # self._drop is not None
+                drops = self._drop if self._drop is not None else []
                 # Validate columns to drop exist
-                missing_cols = set(self._drop) - set(data.columns)
+                missing_cols = set(drops) - set(data.columns)
                 if missing_cols:
                     logger.warning(
                         f"TransformerSelectColumns: Columns to drop not found: {missing_cols}"
                     )
 
                 logger.info(
-                    f"TransformerSelectColumns: Dropping {len(self._drop)} columns: "
-                    f"{self._drop}"
+                    f"TransformerSelectColumns: Dropping {len(drops)} columns: "
+                    f"{drops}"
                 )
-                result = data.drop(columns=self._drop, errors='ignore')
+                result = data.drop(columns=drops, errors='ignore')
 
             logger.info(
                 f"TransformerSelectColumns: Output has {len(result.columns)} columns"
@@ -658,6 +662,9 @@ class TransformerGroupByAggregate(Transformer):
             )
 
             result = data.groupby(self._group_by).agg(self._aggregations)
+
+            if not isinstance(result, pd.DataFrame):
+                result = result.to_frame()
 
             if self._reset_index:
                 logger.debug("TransformerGroupByAggregate: Resetting index")

@@ -761,9 +761,11 @@ def test_transformer_groupby_aggregate_single_column(caplog):
     assert len(result) == 2  # Two categories
     assert set(result['category']) == {'A', 'B'}
 
-    # Verify values
-    a_sales = result[result['category'] == 'A']['sales'].iloc[0]
-    b_sales = result[result['category'] == 'B']['sales'].iloc[0]
+    # Verify values - Separar en pasos para mejor inferencia de tipos
+    a_rows = result[result['category'] == 'A']
+    b_rows = result[result['category'] == 'B']
+    a_sales = int(a_rows['sales'].tolist()[0]) if len(a_rows) > 0 else 0
+    b_sales = int(b_rows['sales'].tolist()[0]) if len(b_rows) > 0 else 0
     assert a_sales == 250  # 100 + 150
     assert b_sales == 750  # 200 + 250 + 300
 
