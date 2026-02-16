@@ -1,155 +1,129 @@
-# unidad1-project
+# Unidad 1 Project: Netflix ETL
 
-[LInk a los datos](https://www.kaggle.com/datasets/shivamb/netflix-shows)
+Este proyecto implementa una tubería (pipeline) ETL (Extract, Transform, Load) para procesar datos de títulos de Netflix, utilizando un enfoque modular y orientado a objetos.
 
+## Descripción
 
-- [ ] Estructura de paquete de python
-- [ ] Lectura de CSV
-- [ ] Separar el CSV en dos diferentes
-- [ ] ¿? Extensión a ficheros excel
+El objetivo es proporcionar una herramienta extensible para la limpieza y transformación de datos. El sistema está diseñado en componentes desacoplados:
 
-## Roadmap por Fases
+- **Readers**: Lectura de fuentes de datos (CSV, JSON) de manera eficiente (por chunks).
+- **Transformers**: Aplicación de reglas de negocio y limpieza de datos.
+- **Writers**: Exportación de los datos procesados (CSV, JSON).
+- **Orchestrator**: Coordinación del flujo de trabajo completo.
 
-### Fase 1: Fundamentos
-**Objetivo:** Estructura del proyecto funcionando
+## Estructura del Proyecto
 
-**Tareas:**
-- Crear estructura de carpetas con src layout
-- Configurar pyproject.toml con dependencias básicas
-- Crear módulos vacíos con __init__.py
-- Configurar herramientas de calidad (ruff, pyright)
-- Verificar que los imports funcionan entre módulos
+```
+unidad1-project/
+├── data/               # Archivos de entrada y salida (ej. netflix_titles.csv)
+├── src/
+│   └── unidad1_project/
+│       ├── orchestrator/   # Orquestador del pipeline
+│       ├── readers/        # Lectores de datos (CSVReaderPandas, etc.)
+│       ├── transformers/   # Transformadores de datos
+│       ├── writers/        # Escritores de datos
+│       ├── logging/        # Configuración de logs
+│       └── __init__.py     # Exportación de componentes principales
+├── tests/              # Tests
+├── main.py             # Script de ejemplo de uso
+├── pyproject.toml      # Gestión de dependencias y configuración
+└── README.md           # Documentación del proyecto
+```
 
-**Checkpoint:** Puedes importar módulos entre sí sin errores
+## Requisitos
 
----
+- `uv` (Gestor de proyectos Python recomendado)
+- Opcionalmente: Python >= 3.11 si no usas `uv`
 
-### Fase 2: Código Pythónico
-**Objetivo:** Implementar lectura eficiente de datos
+## Instalación
 
-**Tareas:**
-- Implementar un reader básico para CSV que use generadores
-- El reader debe hacer yield de cada fila, no cargar todo en memoria
-- Crear un context manager para abrir/cerrar archivos automáticamente
-- Usar comprehensions para filtrado básico
-- Añadir un decorador simple para logging de operaciones
+Este proyecto utiliza `uv` para la gestión de dependencias y entornos virtuales.
 
-**Tips:**
-- Piensa en archivos grandes: ¿cómo procesarías un CSV de 10GB?
-- Los generadores son tu mejor amigo para streaming
-- El context manager debe garantizar que los archivos se cierran
+1.  **Clonar el repositorio**:
+    ```bash
+    git clone <url-del-repo>
+    cd unidad1-project
+    ```
 
-**Checkpoint:** Puedes leer un CSV grande línea por línea sin problemas de memoria
+2.  **Instalar dependencias**:
+    ```bash
+    uv sync
+    ```
+    
+    > **Nota**: Si no usas `uv`, puedes instalar las dependencias manualmente desde `pyproject.toml` con `pip install .` o `pip install pandas numpy`.
 
----
+## Uso
 
-### Fase 3: Código Limpio
-**Objetivo:** Código legible y robusto
+### Ejecución Básica
 
-**Tareas:**
-- Refactorizar funciones grandes en funciones pequeñas y específicas
-- Cada función debe hacer UNA cosa bien
-- Renombrar variables con nombres descriptivos (nada de `data`, `tmp`, `x`)
-- Crear excepciones custom para errores específicos
-- Añadir docstrings en formato Sphinx a todas las funciones públicas
-- Implementar validación de inputs con error handling
+El archivo `main.py` contiene un ejemplo completo de uso que:
+1.  Lee el archivo `data/netflix_titles.csv`.
+2.  Aplica transformaciones (completar valores nulos, normalizar cadenas).
+3.  Guarda el resultado en `data/netflix_titles_wr.csv`.
 
-**Tips:**
-- Si una función tiene más de 20 líneas, probablemente hace demasiado
-- Los nombres deben explicar QUÉ es, no CÓMO se usa
-- Las excepciones custom ayudan a debuggear: `InvalidSchemaError` vs `ValueError`
+Para ejecutarlo:
 
-**Checkpoint:** Otro desarrollador puede leer tu código y entenderlo sin preguntar
+```bash
+python main.py
+```
 
----
+### Uso como Librería
 
-### Fase 4: Diseño
-**Objetivo:** Arquitectura extensible con OOP
+Puedes importar los componentes en tus propios scripts para construir pipelines personalizados:
 
-**Tareas:**
-- Crear clases base abstractas (ABC) para Reader, Transformer, Writer
-- Implementar clases concretas que hereden de las ABCs
-- Usar Pydantic para modelos de datos y validación automática
-- Aplicar composición: Pipeline compone múltiples Transformers
-- Cada clase debe tener una sola responsabilidad (SRP)
+```python
+from pathlib import Path
+from unidad1_project import (
+    CSVReaderPandas,
+    TransformerNormalizeStrings,
+    WriterCsv,
+    Orchestrator
+)
 
-**Tips:**
-- Las ABCs definen el contrato: qué métodos DEBEN implementar las subclases
-- Pydantic valida automáticamente: aprovéchalo para schemas de datos
-- Composición > Herencia: un Pipeline "tiene" Transformers, no "es" un Transformer
-- Si una clase hace muchas cosas, divídela
+# 1. Definir rutas
+input_path = Path("mis_datos.csv")
+output_path = Path("datos_limpios.csv")
 
-**Checkpoint:** Puedes añadir un nuevo Reader sin modificar código existente
+# 2. Configurar componentes
+# Lee el archivo en trozos de 1000 filas
+reader = CSVReaderPandas(chunk_size=1000)
 
----
+# Lista de transformaciones a aplicar secuencialmente
+transformers = [
+    TransformerNormalizeStrings()
+    # Agrega más transformadores aquí
+]
 
-### Fase 5: Testing y Optimización
-**Objetivo:** Código confiable y eficiente
+writer = WriterCsv()
 
-**Tareas:**
-- Escribir tests para cada componente (readers, transformers, writers)
-- Crear fixtures con datos de prueba
-- Usar mocking para filesystem (no crear archivos reales en tests)
-- Alcanzar 80%+ de cobertura de código
-- Optimizar transformaciones con pandas cuando sea apropiado
+# 3. Crear y ejecutar el orquestador
+orchestrator = Orchestrator(
+    reader=reader,
+    transformers=transformers,
+    writer=writer
+)
 
-**Tips:**
-- Un test debe probar UNA cosa
-- Los fixtures evitan duplicar código de setup
-- Mock filesystem: usa pytest-mock o unittest.mock
-- pandas es excelente para agregaciones, pero no siempre necesario
+orchestrator.run(input_path, output_path)
+```
 
-**Checkpoint:** Todos los tests pasan y tienes 80%+ de cobertura
+## Desarrollo
 
----
+Para ejecutar los tests y asegurar la calidad del código:
 
-### Fase 6: Integración
-**Objetivo:** Paquete production-ready
+```bash
+# Ejecutar tests
+pytest
 
-**Tareas:**
-- Implementar CLI con argparse o typer
-- El CLI debe permitir ejecutar pipelines desde línea de comandos
-- Escribir README completo con ejemplos de uso
-- Crear ejemplos funcionales en carpeta examples/
-- Preparar el paquete para distribución (build)
+# Verificar tipos y estilo
+ruff check .
+pyright
 
-**Tips:**
-- El CLI es la cara de tu paquete: hazlo intuitivo
-- El README debe tener: instalación, quick start, ejemplos, API reference
-- Los ejemplos deben ser copy-paste y funcionar
-- Prueba instalar tu paquete en un entorno limpio
+# Ejecutar tests con cobertura
+pytest --cov=src --cov-report=term-missing -v
+```
 
-**Checkpoint:** Alguien puede instalar tu paquete y usarlo sin ayuda
+## Autores
 
----
-
-## Funcionalidades Mínimas Requeridas
-
-### Readers
-- [ ] Leer CSV con generadores (yield por fila)
-- [ ] Leer JSON (puede cargar todo, archivos pequeños)
-- [ ] Manejo de errores de archivo no encontrado
-- [ ] Detección automática de delimitadores (CSV)
-
-### Transformers
-- [ ] Filtrar filas por condición
-- [ ] Seleccionar columnas específicas
-- [ ] Transformar valores (ej: normalizar strings)
-- [ ] Agregaciones básicas (suma, promedio por grupo)
-
-### Writers
-- [ ] Escribir CSV
-- [ ] Escribir JSON
-- [ ] Crear archivo si no existe
-- [ ] Manejo de errores de escritura
-
-### Pipeline
-- [ ] Componer Reader + Transformers + Writer
-- [ ] Ejecutar pipeline completo
-- [ ] Logging de operaciones
-- [ ] Manejo de errores en cualquier etapa
-
-### Validación
-- [ ] Validar schema de datos con Pydantic
-- [ ] Validar tipos de columnas
-- [ ] Reportar errores de validación claramente
+- Ander Góngora Allué
+- Raquel Roy Rubio
+- Asier Ballesteros Domínguez

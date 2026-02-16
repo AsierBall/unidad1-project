@@ -2,7 +2,6 @@ from pathlib import Path
 from unidad1_project import CSVReaderPandas, TransformerMissing, TransformerNormalizeStrings, WriterCsv, Orchestrator
 
 
-# TODO: si nos da tiempo añadir cli con argparser o parse (opcion leer un fichero config con pydantic) ????
 def main():
 
     file_path = Path("./data/netflix_titles.csv")
