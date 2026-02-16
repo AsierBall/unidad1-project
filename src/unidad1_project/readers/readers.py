@@ -2,10 +2,12 @@ import csv
 from pathlib import Path
 from typing import Generator, Protocol
 import pandas as pd
-import logging
+from ..logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
+CSV_SNIFFER_ENCODING = "utf-8"
+CSV_SNIFFER_SIZE = 4096
 
 class Reader(Protocol):
     """A reader class that reads a file"""
@@ -47,8 +49,8 @@ class CSVReaderPandas:
         :raises ValueError: If the file is empty or the function can't determine the delimitator.
         """
         try:
-            with open(file_path, "r", newline="", encoding="utf-8") as f:
-                sample = f.read(4096)
+            with open(file_path, "r", newline="", encoding=CSV_SNIFFER_ENCODING) as f:
+                sample = f.read(CSV_SNIFFER_SIZE)
                 if not sample.strip():
                     raise ValueError(f"The file '{file_path}' is empty.")
 
@@ -90,7 +92,6 @@ class CSVReaderPandas:
                 file_path,
                 chunksize=self._chunk_size,
                 sep=delimiter,
-                # TODO: add a Callable to log row errors
                 on_bad_lines="warn",
             )
 
