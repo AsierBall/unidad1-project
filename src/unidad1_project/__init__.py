@@ -6,7 +6,7 @@ from .transformers import (Transformer,
     TransformerNormalizeStrings,
     TransformerImputeMissingsNumeric,
     TransformerImputeMissingsString)
-from .writers import WriterCsv, Writer
+from .writers import WriterCsv, Writer, WriterJson
 from .orchestrator import Orchestrator
 from .logging import setup_logging
 
@@ -23,6 +23,7 @@ __all__ = [
     "TransformerMissing",
     "WriterCsv",
     "Writer",
+    "WriterJson",
     "Orchestrator",
     "Transformer",
     "TransformerMissingThreshold",

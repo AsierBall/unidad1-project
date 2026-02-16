@@ -1,6 +1,7 @@
-from .writers import Writer, WriterCsv
+from .writers import Writer, WriterCsv, WriterJson
 
 __all__ = [
     "Writer",
-    "WriterCsv"
+    "WriterCsv",
+    "WriterJson"
 ]
