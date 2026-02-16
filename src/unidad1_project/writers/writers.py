@@ -2,9 +2,10 @@ from pathlib import Path
 from typing import Protocol
 import pandas as pd
 
-# TODO: writer a formato comprimido `parquet`
-# TODO: writer a formato comprimido `excel` ????
-# TODO: writer a `json`
+from ..logging import get_logger
+
+logger = get_logger(__name__)
+
 
 class Writer(Protocol):
     """Writer class that writes a pandas DataFrame
