@@ -1,5 +1,5 @@
 from pathlib import Path
-from unidad1_project import CSVReaderPandas, TransformerMissing, TransformerNormalizeStrings, WriterCsv, Orchestrator
+from unidad1_project import ReaderCsv, TransformerMissing, TransformerNormalizeStrings, WriterCsv, Orchestrator
 
 
 def main():
@@ -7,7 +7,7 @@ def main():
     file_path = Path("./data/netflix_titles.csv")
     file_path_wr = Path("./data/netflix_titles_wr.csv")
 
-    reader = CSVReaderPandas(5)
+    reader = ReaderCsv(5)
     transformer_missings = TransformerMissing()
     transformer_normalize_strings = TransformerNormalizeStrings()
     writer = WriterCsv()

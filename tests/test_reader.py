@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Generator
 
-from unidad1_project import CSVReaderPandas, JSONReaderPandas
+from unidad1_project import ReaderCsv, ReaderJson
 # --- Test data fixtures ---
 
 
@@ -32,25 +32,25 @@ def json_file_valid(tmp_path) -> Path:
     return path
 
 
-# --- CSVReaderPandas tests ---
+# --- ReaderCsv tests ---
 
 
-class TestCSVReaderPandas:
+class TestReaderCsv:
     def test_init_raises_error_on_invalid_chunk_size(self):
         with pytest.raises(ValueError, match="positive integer"):
-            CSVReaderPandas(chunk_size=0)
+            ReaderCsv(chunk_size=0)
 
     def test_detect_delimiter_comma(self, csv_file_comma):
-        reader = CSVReaderPandas(chunk_size=2)
+        reader = ReaderCsv(chunk_size=2)
         assert reader._detect_delimiter(csv_file_comma) == ","
 
     def test_detect_delimiter_semicolon(self, csv_file_semicolon):
-        reader = CSVReaderPandas(chunk_size=2)
+        reader = ReaderCsv(chunk_size=2)
         assert reader._detect_delimiter(csv_file_semicolon) == ";"
 
     def test_read_yields_correct_chunks(self, csv_file_comma):
         """5 total rows, chunk_size=2 -> should return 3 chunks (2, 2, 1)"""
-        reader = CSVReaderPandas(chunk_size=2)
+        reader = ReaderCsv(chunk_size=2)
         chunks = list(reader.read(csv_file_comma))
 
         assert len(chunks) == 3
@@ -59,25 +59,25 @@ class TestCSVReaderPandas:
         assert len(chunks[2]) == 1
 
     def test_read_file_not_found(self):
-        reader = CSVReaderPandas(chunk_size=5)
+        reader = ReaderCsv(chunk_size=5)
         with pytest.raises(FileNotFoundError):
             list(reader.read(Path("missing.csv")))
 
     def test_read_invalid_extension_warning(self, tmp_path, caplog):
         path = tmp_path / "data.txt"
         path.write_text("a,b\n1,2")
-        reader = CSVReaderPandas(chunk_size=5)
+        reader = ReaderCsv(chunk_size=5)
 
         list(reader.read(path))
         assert "is not .csv" in caplog.text
 
 
-# --- JSONReaderPandas tests ---
+# --- ReaderJson tests ---
 
 
-class TestJSONReaderPandas:
+class TestReaderJson:
     def test_read_valid_json(self, json_file_valid):
-        reader = JSONReaderPandas()
+        reader = ReaderJson()
         generator = reader.read(json_file_valid)
 
         df = next(generator)
@@ -89,7 +89,7 @@ class TestJSONReaderPandas:
         path = tmp_path / "broken.json"
         path.write_text("{'invalid': 'json'}")
 
-        reader = JSONReaderPandas()
+        reader = ReaderJson()
         with pytest.raises(ValueError, match="not a valid JSON"):
             list(reader.read(path))
 
@@ -97,11 +97,11 @@ class TestJSONReaderPandas:
         path = tmp_path / "empty.json"
         path.write_text("[]")
 
-        reader = JSONReaderPandas()
+        reader = ReaderJson()
         list(reader.read(path))
         assert "returned an empty DataFrame" in caplog.text
 
     def test_is_generator(self, json_file_valid):
-        reader = JSONReaderPandas()
+        reader = ReaderJson()
         gen = reader.read(json_file_valid)
         assert isinstance(gen, Generator)

@@ -23,7 +23,7 @@ class Reader(Protocol):
         ...
 
 
-class CSVReaderPandas:
+class ReaderCsv:
     """
     CSV reader implementation using pandas with chunk-based loading support.
     This class allows to read big CSV files by chunks using a generator
@@ -109,7 +109,7 @@ class CSVReaderPandas:
             raise
 
 
-class JSONReaderPandas:
+class ReaderJson:
     """
     JSON reader implementation using pandas.
     This class reads JSON files and yields them as DataFrames to maintain

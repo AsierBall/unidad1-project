@@ -1,7 +1,7 @@
-from .readers import Reader, CSVReaderPandas, JSONReaderPandas
+from .readers import Reader, ReaderCsv, ReaderJson
 
 __all__ = [
     "Reader",
-    "CSVReaderPandas",
-    "JSONReaderPandas",
+    "ReaderCsv",
+    "ReaderJson",
     ]

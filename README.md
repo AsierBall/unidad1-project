@@ -19,7 +19,7 @@ unidad1-project/
 ├── src/
 │   └── unidad1_project/
 │       ├── orchestrator/   # Orquestador del pipeline
-│       ├── readers/        # Lectores de datos (CSVReaderPandas, etc.)
+│       ├── readers/        # Lectores de datos (ReaderCsv, etc.)
 │       ├── transformers/   # Transformadores de datos
 │       ├── writers/        # Escritores de datos
 │       ├── logging/        # Configuración de logs
@@ -74,7 +74,7 @@ Puedes importar los componentes en tus propios scripts para construir pipelines 
 ```python
 from pathlib import Path
 from unidad1_project import (
-    CSVReaderPandas,
+    ReaderCsv,
     TransformerNormalizeStrings,
     WriterCsv,
     Orchestrator
@@ -86,7 +86,7 @@ output_path = Path("datos_limpios.csv")
 
 # 2. Configurar componentes
 # Lee el archivo en trozos de 1000 filas
-reader = CSVReaderPandas(chunk_size=1000)
+reader = ReaderCsv(chunk_size=1000)
 
 # Lista de transformaciones a aplicar secuencialmente
 transformers = [
