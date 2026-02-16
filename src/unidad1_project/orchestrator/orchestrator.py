@@ -3,6 +3,9 @@ from ..transformers import Transformer
 from ..writers import Writer
 from pathlib import Path
 from functools import reduce
+from ..logging import get_logger
+
+logger = get_logger(__name__)
 
 class Orchestrator():
     """
@@ -21,7 +24,6 @@ class Orchestrator():
         self._transformers = transformers
         self._writer = writer
 
-<<<<<<< Updated upstream
     def run(self, input_file_path: Path, output_file_path: Path):
         """runs the data stream from reading to writing
 
@@ -30,6 +32,7 @@ class Orchestrator():
         :param output_file_path: path to the output file
         :type output_file_path: Path
         """
+        index = 0
         for chunk in self._reader.read(input_file_path):
             cleaned_chunk = reduce(
                 lambda data, transformer: transformer.transform(data),
@@ -38,9 +41,6 @@ class Orchestrator():
             )
 
             self._writer.write(cleaned_chunk, output_file_path)
-=======
-    def run(self, input_path, output_path):
-        for chunk in self._reader.read(input_path):
-            cleaned_chunk = self._transformer.transform(chunk)
-            self._writer.write(cleaned_chunk, output_path)
->>>>>>> Stashed changes
+
+            index += 1
+            logger.info(f"chunk {index} processed")
