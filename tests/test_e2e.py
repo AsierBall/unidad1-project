@@ -1,9 +1,12 @@
 import pytest
 from pathlib import Path
+import pandas as pd
+import json
 
-from unidad1_project import Orchestrator, CSVReaderPandas, WriterCsv, \
+from unidad1_project import Orchestrator, CSVReaderPandas, WriterCsv, WriterJson, \
     TransformerMissing, TransformerNormalizeStrings
 from unidad1_project.readers.readers import JSONReaderPandas
+from unidad1_project.writers.writers import WriterJson
 
 @pytest.fixture
 def csv_path():
@@ -15,9 +18,20 @@ def json_path():
     return Path(__file__).parent / "data" / "test.json"
 
 def count_file_rows(file_path):
-    with open(file_path, 'r') as f:
+    with open(file_path, 'r', encoding="utf-8") as f:
         return sum(1 for _ in f)
 
+def count_file_rows_json(file_path):
+    with file_path.open("r", encoding="utf-8") as f:
+            lines = f.readlines()
+    
+    return len([json.loads(line) for line in lines])
+
+def count_file_rows_json_oneliner(file_path):
+    with open(file_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    
+    return len(data)
 class TestE2E:
     def test_csv_reader(self, csv_path, tmp_path):
         output_path = tmp_path / "out.csv"
@@ -39,7 +53,7 @@ class TestE2E:
         num_rows_output = count_file_rows(output_path)
         assert num_rows_input >= num_rows_output
 
-    def test_json_reader(self, json_path, tmp_path):
+    def test_json(self, json_path, tmp_path):
         output_path = tmp_path / "out.json"
 
         orchestrator = Orchestrator(
@@ -48,13 +62,15 @@ class TestE2E:
                 TransformerMissing(),
                 TransformerNormalizeStrings(),
             ],
-            writer = WriterCsv()
+            writer = WriterJson()
             )
 
         orchestrator.run(json_path, output_path)
 
         assert Path.is_file(output_path)
 
-        num_rows_input = count_file_rows(json_path)
-        num_rows_output = count_file_rows(output_path)
+        num_rows_input = count_file_rows_json_oneliner(json_path)
+        num_rows_output = count_file_rows_json(output_path)
         assert num_rows_input >= num_rows_output
+
+
