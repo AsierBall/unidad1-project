@@ -1,9 +1,9 @@
 import pytest
 import pandas as pd
 from pathlib import Path
-from unidad1_project import Orchestrator, Transformer, Reader, Writer# Ajusta la importación
+from unidad1_project import Orchestrator, Transformer, Reader, Writer
 
-# --- Mocks Manuales (Reutilizables) ---
+# --- Mocks ---
 
 class MockReader(Reader):
     def read(self, file_path: Path):
@@ -18,7 +18,7 @@ class MockWriter(Writer):
     def write(self, data_frame: pd.DataFrame, file_path: Path):
         pass
 
-# --- Fixtures para inicializar el escenario ---
+# --- Fixtures ---
 
 @pytest.fixture
 def input_path(): return Path("in.txt")
@@ -26,7 +26,7 @@ def input_path(): return Path("in.txt")
 @pytest.fixture
 def output_path(): return Path("out.txt")
 
-# --- Tests Atómicos ---
+# --- Tests ---
 
 class TestOrchestratorFlow:
     def test_run_execution(self, input_path, output_path, caplog):
