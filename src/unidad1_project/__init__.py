@@ -5,7 +5,11 @@ from .transformers import (Transformer,
     TransformerMissingThreshold,
     TransformerNormalizeStrings,
     TransformerImputeMissingsNumeric,
-    TransformerImputeMissingsString)
+    TransformerImputeMissingsString,
+    TransformerGroupByAggregate,
+    TransformerSelectColumns,
+    TransformerFilterRows,
+    )
 from .writers import WriterCsv
 from .orchestrator import Orchestrator
 from .logging import setup_logging
@@ -28,4 +32,7 @@ __all__ = [
     "TransformerNormalizeStrings",
     "TransformerImputeMissingsNumeric",
     "TransformerImputeMissingsString",
+    "TransformerGroupByAggregate",
+    "TransformerSelectColumns",
+    "TransformerFilterRows",
 ]

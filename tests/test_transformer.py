@@ -6,7 +6,11 @@ from unidad1_project import (TransformerMissing,
     TransformerMissingThreshold,
     TransformerNormalizeStrings,
     TransformerImputeMissingsNumeric,
-    TransformerImputeMissingsString)
+    TransformerImputeMissingsString,
+    TransformerFilterRows,
+    TransformerSelectColumns,
+    TransformerGroupByAggregate
+    )
 
 @pytest.mark.parametrize(
     "record, expected_valid",
@@ -421,3 +425,542 @@ def test_transformer_impute_missings_string_default_none_warning(caplog):
     # Verify warning was logged
     assert "TransformerImputeMissingsString: Using 'default' strategy with default_value=None" in caplog.text
     assert "may not produce expected results" in caplog.text
+
+@pytest.mark.parametrize(
+    "data, column, operator, value, expected_rows",
+    [
+        (
+            pd.DataFrame({'age': [25, 30, 35, 40], 'name': ['A', 'B', 'C', 'D']}),
+            'age',
+            '>',
+            30,
+            2  # 35, 40
+        ),
+        (
+            pd.DataFrame({'age': [25, 30, 35, 40], 'name': ['A', 'B', 'C', 'D']}),
+            'age',
+            '>=',
+            30,
+            3  # 30, 35, 40
+        ),
+        (
+            pd.DataFrame({'age': [25, 30, 35, 40], 'name': ['A', 'B', 'C', 'D']}),
+            'age',
+            '<',
+            35,
+            2  # 25, 30
+        ),
+        (
+            pd.DataFrame({'age': [25, 30, 35, 40], 'name': ['A', 'B', 'C', 'D']}),
+            'age',
+            '<=',
+            35,
+            3  # 25, 30, 35
+        ),
+        (
+            pd.DataFrame({'age': [25, 30, 35, 40], 'name': ['A', 'B', 'C', 'D']}),
+            'age',
+            '==',
+            30,
+            1  # 30
+        ),
+        (
+            pd.DataFrame({'age': [25, 30, 35, 40], 'name': ['A', 'B', 'C', 'D']}),
+            'age',
+            '!=',
+            30,
+            3  # 25, 35, 40
+        ),
+        (
+            pd.DataFrame({'city': ['NY', 'LA', 'SF', 'NY'], 'pop': [100, 200, 150, 110]}),
+            'city',
+            'in',
+            ['NY', 'SF'],
+            3  # NY, SF, NY
+        ),
+        (
+            pd.DataFrame({'city': ['NY', 'LA', 'SF', 'NY'], 'pop': [100, 200, 150, 110]}),
+            'city',
+            'not_in',
+            ['LA'],
+            3  # NY, SF, NY
+        ),
+        (
+            pd.DataFrame({'text': ['hello world', 'test', 'hello test', 'other']}),
+            'text',
+            'contains',
+            'hello',
+            2  # 'hello world', 'hello test'
+        ),
+    ],
+    ids=[
+        "greater_than",
+        "greater_equal",
+        "less_than",
+        "less_equal",
+        "equals",
+        "not_equals",
+        "in_list",
+        "not_in_list",
+        "contains_string"
+    ]
+)
+def test_transformer_filter_rows(caplog, data, column, operator, value, expected_rows):
+    """Test TransformerFilterRows with various operators."""
+    caplog.set_level(logging.DEBUG)
+
+    transformer = TransformerFilterRows(column=column, operator=operator, value=value)
+    result = transformer.transform(data)
+
+    # Verify correct number of rows
+    assert len(result) == expected_rows
+
+    # Verify logs
+    assert "TransformerFilterRows: Processing DataFrame with shape" in caplog.text
+    assert f"TransformerFilterRows: Filtering column '{column}'" in caplog.text
+    assert f"with operator '{operator}'" in caplog.text
+    assert "TransformerFilterRows: Kept" in caplog.text
+    assert "rows" in caplog.text
+
+
+def test_transformer_filter_rows_custom_condition(caplog):
+    """Test TransformerFilterRows with custom condition."""
+    caplog.set_level(logging.INFO)
+
+    data = pd.DataFrame({'age': [25, 30, 35, 40], 'salary': [50000, 60000, 70000, 80000]})
+
+    # Custom condition: age > 28 AND salary > 65000
+    def condition(df):
+        return (df['age'] > 28) & (df['salary'] > 65000)
+
+    transformer = TransformerFilterRows(condition=condition)
+    result = transformer.transform(data)
+
+    # Should keep rows with age 35 and 40
+    assert len(result) == 2
+    assert list(result['age']) == [35, 40]
+
+    # Verify logs
+    assert "TransformerFilterRows: Applying custom condition" in caplog.text
+
+
+def test_transformer_filter_rows_no_matches(caplog):
+    """Test TransformerFilterRows when no rows match."""
+    caplog.set_level(logging.INFO)
+
+    data = pd.DataFrame({'age': [25, 30, 35], 'name': ['A', 'B', 'C']})
+    transformer = TransformerFilterRows(column='age', operator='>', value=100)
+
+    result = transformer.transform(data)
+
+    # Should return empty DataFrame
+    assert len(result) == 0
+    assert list(result.columns) == list(data.columns)
+
+    # Verify logs show 100% removal
+    assert "removed 3 rows (100.00%)" in caplog.text
+
+
+def test_transformer_filter_rows_all_match(caplog):
+    """Test TransformerFilterRows when all rows match."""
+    caplog.set_level(logging.INFO)
+
+    data = pd.DataFrame({'age': [25, 30, 35], 'name': ['A', 'B', 'C']})
+    transformer = TransformerFilterRows(column='age', operator='>', value=20)
+
+    result = transformer.transform(data)
+
+    # Should keep all rows
+    assert len(result) == len(data)
+
+    # Verify logs show 0% removal
+    assert "removed 0 rows (0.00%)" in caplog.text
+
+
+def test_transformer_filter_rows_invalid_column(caplog):
+    """Test TransformerFilterRows with non-existent column."""
+    caplog.set_level(logging.ERROR)
+
+    data = pd.DataFrame({'age': [25, 30, 35]})
+    transformer = TransformerFilterRows(column='invalid_col', operator='>', value=30)
+
+    with pytest.raises(ValueError, match="Column 'invalid_col' not found"):
+        transformer.transform(data)
+
+    # Verify error log
+    assert "TransformerFilterRows: Column 'invalid_col' not found" in caplog.text
+
+
+def test_transformer_filter_rows_no_operator_or_condition(caplog):
+    """Test TransformerFilterRows initialization without operator or condition."""
+    caplog.set_level(logging.ERROR)
+
+    with pytest.raises(ValueError, match="Must provide either operator or condition"):
+        TransformerFilterRows(column='age')
+
+    # Verify error log
+    assert "TransformerFilterRows: Must provide either operator or condition" in caplog.text
+
+
+def test_transformer_filter_rows_invalid_operator(caplog):
+    """Test TransformerFilterRows with invalid operator."""
+    caplog.set_level(logging.ERROR)
+
+    with pytest.raises(ValueError, match="Invalid operator"):
+        TransformerFilterRows(column='age', operator='invalid', value=30)
+
+    # Verify error log
+    assert "TransformerFilterRows: Invalid operator 'invalid'" in caplog.text
+
+
+def test_transformer_filter_rows_operator_without_column(caplog):
+    """Test TransformerFilterRows with operator but no column."""
+    caplog.set_level(logging.ERROR)
+
+    with pytest.raises(ValueError, match="Column must be specified when using operator"):
+        TransformerFilterRows(operator='>', value=30)
+
+    # Verify error log
+    assert "TransformerFilterRows: Column must be specified when using operator" in caplog.text
+
+@pytest.mark.parametrize(
+    "data, columns, expected_columns",
+    [
+        (
+            pd.DataFrame({'A': [1, 2], 'B': [3, 4], 'C': [5, 6]}),
+            ['A', 'C'],
+            ['A', 'C']
+        ),
+        (
+            pd.DataFrame({'A': [1, 2], 'B': [3, 4], 'C': [5, 6]}),
+            ['B'],
+            ['B']
+        ),
+        (
+            pd.DataFrame({'A': [1, 2], 'B': [3, 4], 'C': [5, 6]}),
+            ['C', 'A', 'B'],
+            ['C', 'A', 'B']  # Order matters
+        ),
+    ],
+    ids=[
+        "select_multiple",
+        "select_single",
+        "reorder_columns"
+    ]
+)
+def test_transformer_select_columns(caplog, data, columns, expected_columns):
+    """Test TransformerSelectColumns with column selection."""
+    caplog.set_level(logging.DEBUG)
+
+    transformer = TransformerSelectColumns(columns=columns)
+    result = transformer.transform(data)
+
+    # Verify correct columns
+    assert list(result.columns) == expected_columns
+    assert len(result) == len(data)
+
+    # Verify logs
+    assert "TransformerSelectColumns: Processing DataFrame with shape" in caplog.text
+    assert f"TransformerSelectColumns: Selecting {len(columns)} columns" in caplog.text
+    assert "TransformerSelectColumns: Output has" in caplog.text
+
+
+@pytest.mark.parametrize(
+    "data, drop, expected_columns",
+    [
+        (
+            pd.DataFrame({'A': [1, 2], 'B': [3, 4], 'C': [5, 6]}),
+            ['B'],
+            ['A', 'C']
+        ),
+        (
+            pd.DataFrame({'A': [1, 2], 'B': [3, 4], 'C': [5, 6]}),
+            ['A', 'C'],
+            ['B']
+        ),
+        (
+            pd.DataFrame({'A': [1, 2], 'B': [3, 4], 'C': [5, 6], 'D': [7, 8]}),
+            ['B', 'D'],
+            ['A', 'C']
+        ),
+    ],
+    ids=[
+        "drop_single",
+        "drop_multiple",
+        "drop_alternating"
+    ]
+)
+def test_transformer_select_columns_drop(caplog, data, drop, expected_columns):
+    """Test TransformerSelectColumns with column dropping."""
+    caplog.set_level(logging.DEBUG)
+
+    transformer = TransformerSelectColumns(drop=drop)
+    result = transformer.transform(data)
+
+    # Verify correct columns remain
+    assert list(result.columns) == expected_columns
+    assert len(result) == len(data)
+
+    # Verify logs
+    assert f"TransformerSelectColumns: Dropping {len(drop)} columns" in caplog.text
+
+
+def test_transformer_select_columns_invalid_column(caplog):
+    """Test TransformerSelectColumns with non-existent column."""
+    caplog.set_level(logging.ERROR)
+
+    data = pd.DataFrame({'A': [1, 2], 'B': [3, 4]})
+    transformer = TransformerSelectColumns(columns=['A', 'Z'])
+
+    with pytest.raises(ValueError, match="Columns not found in DataFrame"):
+        transformer.transform(data)
+
+    # Verify error log
+    assert "TransformerSelectColumns: Columns not found: {'Z'}" in caplog.text
+
+
+def test_transformer_select_columns_drop_nonexistent(caplog):
+    """Test TransformerSelectColumns dropping non-existent columns."""
+    caplog.set_level(logging.WARNING)
+
+    data = pd.DataFrame({'A': [1, 2], 'B': [3, 4]})
+    transformer = TransformerSelectColumns(drop=['B', 'Z'])
+
+    result = transformer.transform(data)
+
+    # Should drop B and ignore Z
+    assert list(result.columns) == ['A']
+
+    # Verify warning log
+    assert "TransformerSelectColumns: Columns to drop not found: {'Z'}" in caplog.text
+
+
+def test_transformer_select_columns_both_params_error(caplog):
+    """Test TransformerSelectColumns with both columns and drop specified."""
+    caplog.set_level(logging.ERROR)
+
+    with pytest.raises(ValueError, match="Cannot specify both 'columns' and 'drop'"):
+        TransformerSelectColumns(columns=['A'], drop=['B'])
+
+    # Verify error log
+    assert "TransformerSelectColumns: Cannot specify both columns and drop" in caplog.text
+
+
+def test_transformer_select_columns_no_params_error(caplog):
+    """Test TransformerSelectColumns without any parameters."""
+    caplog.set_level(logging.ERROR)
+
+    with pytest.raises(ValueError, match="Must specify either 'columns' or 'drop'"):
+        TransformerSelectColumns()
+
+    # Verify error log
+    assert "TransformerSelectColumns: Must specify either columns or drop" in caplog.text
+
+
+def test_transformer_groupby_aggregate_single_column(caplog):
+    """Test TransformerGroupByAggregate with single group column."""
+    caplog.set_level(logging.DEBUG)
+
+    data = pd.DataFrame({
+        'category': ['A', 'A', 'B', 'B', 'B'],
+        'sales': [100, 150, 200, 250, 300],
+        'quantity': [10, 15, 20, 25, 30]
+    })
+
+    transformer = TransformerGroupByAggregate(
+        group_by='category',
+        aggregations={'sales': 'sum', 'quantity': 'mean'}
+    )
+    result = transformer.transform(data)
+
+    # Verify aggregation
+    assert len(result) == 2  # Two categories
+    assert set(result['category']) == {'A', 'B'}
+
+    # Verify values
+    a_sales = result[result['category'] == 'A']['sales'].iloc[0]
+    b_sales = result[result['category'] == 'B']['sales'].iloc[0]
+    assert a_sales == 250  # 100 + 150
+    assert b_sales == 750  # 200 + 250 + 300
+
+    # Verify logs
+    assert "TransformerGroupByAggregate: Processing DataFrame with shape" in caplog.text
+    assert "TransformerGroupByAggregate: Grouping by ['category']" in caplog.text
+    assert "TransformerGroupByAggregate: Reduced from 5 rows to 2 groups" in caplog.text
+
+
+def test_transformer_groupby_aggregate_multiple_columns(caplog):
+    """Test TransformerGroupByAggregate with multiple group columns."""
+    caplog.set_level(logging.DEBUG)
+
+    data = pd.DataFrame({
+        'category': ['A', 'A', 'A', 'B', 'B'],
+        'region': ['East', 'East', 'West', 'East', 'West'],
+        'sales': [100, 150, 200, 250, 300]
+    })
+
+    transformer = TransformerGroupByAggregate(
+        group_by=['category', 'region'],
+        aggregations={'sales': 'sum'}
+    )
+    result = transformer.transform(data)
+
+    # Should have 3 groups: A-East, A-West, B-East, B-West
+    assert len(result) == 4
+
+    # Verify logs
+    assert "TransformerGroupByAggregate: Grouping by ['category', 'region']" in caplog.text
+
+
+def test_transformer_groupby_aggregate_multiple_functions(caplog):
+    """Test TransformerGroupByAggregate with multiple aggregation functions."""
+    caplog.set_level(logging.DEBUG)
+
+    data = pd.DataFrame({
+        'category': ['A', 'A', 'B', 'B'],
+        'sales': [100, 200, 150, 250]
+    })
+
+    transformer = TransformerGroupByAggregate(
+        group_by='category',
+        aggregations={'sales': ['sum', 'mean', 'max', 'min']}
+    )
+    result = transformer.transform(data)
+
+    # Verify multi-level aggregation
+    assert len(result) == 2
+
+    # Column names should be flattened
+    assert any('sum' in str(col) for col in result.columns)
+    assert any('mean' in str(col) for col in result.columns)
+
+    # Verify logs
+    assert "TransformerGroupByAggregate: Flattening multi-level columns" in caplog.text
+
+
+def test_transformer_groupby_aggregate_various_functions(caplog):
+    """Test TransformerGroupByAggregate with various aggregation functions."""
+    caplog.set_level(logging.DEBUG)
+
+    data = pd.DataFrame({
+        'group': ['X', 'X', 'X', 'Y', 'Y'],
+        'value': [10, 20, 30, 40, 50]
+    })
+
+    transformer = TransformerGroupByAggregate(
+        group_by='group',
+        aggregations={'value': ['sum', 'mean', 'median', 'min', 'max', 'count', 'std']}
+    )
+    result = transformer.transform(data)
+
+    # Verify result
+    assert len(result) == 2
+
+    # Verify logs
+    assert "TransformerGroupByAggregate: Grouping by ['group']" in caplog.text
+
+
+def test_transformer_groupby_aggregate_no_reset_index(caplog):
+    """Test TransformerGroupByAggregate without resetting index."""
+    caplog.set_level(logging.DEBUG)
+
+    data = pd.DataFrame({
+        'category': ['A', 'A', 'B', 'B'],
+        'sales': [100, 200, 150, 250]
+    })
+
+    transformer = TransformerGroupByAggregate(
+        group_by='category',
+        aggregations={'sales': 'sum'},
+        reset_index=False
+    )
+    result = transformer.transform(data)
+
+    # Index should be 'category'
+    assert result.index.name == 'category'
+
+    # Should not see reset index log
+    assert "TransformerGroupByAggregate: Resetting index" not in caplog.text
+
+
+def test_transformer_groupby_aggregate_invalid_group_column(caplog):
+    """Test TransformerGroupByAggregate with non-existent group column."""
+    caplog.set_level(logging.ERROR)
+
+    data = pd.DataFrame({'category': ['A', 'B'], 'sales': [100, 200]})
+    transformer = TransformerGroupByAggregate(
+        group_by='invalid_column',
+        aggregations={'sales': 'sum'}
+    )
+
+    with pytest.raises(ValueError, match="Group-by columns not found"):
+        transformer.transform(data)
+
+    # Verify error log
+    assert "TransformerGroupByAggregate: Group-by columns not found: {'invalid_column'}" in caplog.text
+
+
+def test_transformer_groupby_aggregate_invalid_agg_column(caplog):
+    """Test TransformerGroupByAggregate with non-existent aggregation column."""
+    caplog.set_level(logging.ERROR)
+
+    data = pd.DataFrame({'category': ['A', 'B'], 'sales': [100, 200]})
+    transformer = TransformerGroupByAggregate(
+        group_by='category',
+        aggregations={'invalid_col': 'sum'}
+    )
+
+    with pytest.raises(ValueError, match="Aggregation columns not found"):
+        transformer.transform(data)
+
+    # Verify error log
+    assert "TransformerGroupByAggregate: Aggregation columns not found: {'invalid_col'}" in caplog.text
+
+
+def test_transformer_groupby_aggregate_empty_groups(caplog):
+    """Test TransformerGroupByAggregate that results in empty groups."""
+    caplog.set_level(logging.INFO)
+
+    data = pd.DataFrame({
+        'category': ['A'],
+        'sales': [100]
+    })
+
+    transformer = TransformerGroupByAggregate(
+        group_by='category',
+        aggregations={'sales': 'sum'}
+    )
+    result = transformer.transform(data)
+
+    # Should have 1 group
+    assert len(result) == 1
+    assert result['sales'].iloc[0] == 100
+
+
+def test_transformer_groupby_aggregate_complex_scenario(caplog):
+    """Test TransformerGroupByAggregate with complex real-world scenario."""
+    caplog.set_level(logging.INFO)
+
+    data = pd.DataFrame({
+        'store': ['Store1', 'Store1', 'Store2', 'Store2', 'Store1'],
+        'product': ['A', 'B', 'A', 'B', 'A'],
+        'sales': [100, 200, 150, 250, 120],
+        'quantity': [10, 20, 15, 25, 12],
+        'price': [10.0, 10.0, 10.0, 10.0, 10.0]
+    })
+
+    transformer = TransformerGroupByAggregate(
+        group_by=['store', 'product'],
+        aggregations={
+            'sales': ['sum', 'mean'],
+            'quantity': 'sum',
+            'price': 'first'
+        }
+    )
+    result = transformer.transform(data)
+
+    # Should have 4 unique store-product combinations
+    assert len(result) == 4
+
+    # Verify logs
+    assert "TransformerGroupByAggregate: Reduced from 5 rows to 4 groups" in caplog.text
