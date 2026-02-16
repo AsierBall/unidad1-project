@@ -2,7 +2,7 @@ import pytest
 from pathlib import Path
 import json
 
-from unidad1_project import Orchestrator, CSVReaderPandas, WriterCsv, WriterJson, \
+from unidad1_project import Orchestrator, CSVReaderPandas, JSONReaderPandas, WriterCsv, WriterJson, \
     TransformerMissing, TransformerNormalizeStrings
 
 @pytest.fixture
@@ -21,16 +21,17 @@ def count_file_rows(file_path):
 def count_file_rows_json(file_path):
     with file_path.open("r", encoding="utf-8") as f:
             lines = f.readlines()
-    
+
     return len([json.loads(line) for line in lines])
 
 def count_file_rows_json_oneliner(file_path):
     with open(file_path, "r", encoding="utf-8") as f:
         data = json.load(f)
-    
+
     return len(data)
 class TestE2E:
     def test_csv_reader(self, csv_path, tmp_path):
+        """tests end to end pipeline for a csv file"""
         output_path = tmp_path / "out.csv"
 
         orchestrator = Orchestrator(
@@ -51,6 +52,7 @@ class TestE2E:
         assert num_rows_input >= num_rows_output
 
     def test_json(self, json_path, tmp_path):
+        """tests end to end pipeline for json files"""
         output_path = tmp_path / "out.json"
 
         orchestrator = Orchestrator(
