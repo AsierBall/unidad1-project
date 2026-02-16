@@ -1,4 +1,4 @@
-from .readers import CSVReader, CSVReaderPandas
+from .readers import Reader, CSVReaderPandas, JSONReaderPandas
 from .transformers import (Transformer,
     TransformerMissing,
     TransformerMissingThreshold,
@@ -10,9 +10,10 @@ from .orchestrator import Orchestrator
 
 
 __all__ = [
-    "CSVReader",
-    "TransformerMissing",
+    "Reader",
+    "JSONReaderPandas",
     "CSVReaderPandas",
+    "TransformerMissing",
     "WriterCsv",
     "Orchestrator",
     "Transformer",
