@@ -7,49 +7,63 @@ import pandas as pd
 # TODO: writer a `json`
 
 class Writer(Protocol):
-    """Interface for objects capable of writing a pandas DataFrame
+    """Writer class that writes a pandas DataFrame
     to a destination file.
     """
-    def write(self, data_frame: pd.DataFrame) -> None:
+    def write(self, data_frame: pd.DataFrame, file_path: Path) -> None:
         """
         Write a DataFrame to the configured destination.
+        """
+        ...
 
-    """
-    def write(self, data_frame: pd.DataFrame) -> None: ...
+
 
 class WriterCsv(Writer):
-    def __init__(self, file_path: Path):
+    """
+    CSV implementation of the Writer interface.
+
+    - Creates the file if it does not exist.
+    - Appends data if it exists.
+    - Validates column consistency before appending.
+    """
+
+    def _create_directory_if_not_exist(self, file_path: Path) -> None:
         """
-        CSV implementation of the Writer interface.
-
-        - Creates the file if it does not exist.
-        - Appends data if it exists.
-        - Validates column consistency before appending.
+        Ensure that the parent directory exists.
         """
-
-        self._file_path = file_path
-
+        file_path.parent.mkdir(parents=True, exist_ok=True)
 
 
-    def _create_directory_if_not_exist(self) -> None:
-        self._file_path.parent.mkdir(parents=True, exist_ok=True)
 
+    def _validate_columns(self, df: pd.DataFrame, file_path: Path) -> None:
+        """
+        Validate that the DataFrame columns match the existing CSV file.
 
-    def _validate_columns(self, df: pd.DataFrame) -> None:
-        existing_df = pd.read_csv(self._file_path, nrows=0)
-
+        :param df: DataFrame to validate.
+        :type df: pandas.DataFrame
+        :raises ValueError: If column names do not match the existing file.
+        """
+        existing_df = pd.read_csv(file_path, nrows=0)
         if list(existing_df.columns) != list(df.columns):
             raise ValueError(f"Column mismatch.\n"
                     f"Existing: {list(existing_df.columns)}\n"
                     f"New: {list(df.columns)}")
 
-    def write(self, data_frame: pd.DataFrame) -> None:
-        print(f"writing file... {self._file_path}")
-        print(data_frame)
 
-        self._create_directory_if_not_exist()
+    def write(self, data_frame: pd.DataFrame, file_path: Path) -> None:
+        """
+        Append the provided DataFrame to the CSV file.
 
-        file_exists = self._file_path.exists()
+        If the file does not exist, it is created.
+        If it exists, column consistency is validated before appending.
+
+        :param data_frame: DataFrame to be written.
+        :type data_frame: pandas.DataFrame
+        """
+        self._create_directory_if_not_exist(file_path)
+
+        file_exists = file_path.exists()
+
         if file_exists:
             self._validate_columns(data_frame, file_path)
 
