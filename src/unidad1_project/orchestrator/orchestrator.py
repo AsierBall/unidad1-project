@@ -1,15 +1,21 @@
 from ..readers import Reader
 from ..transformers import Transformer
 from ..writers import Writer
+from pathlib import Path
+from functools import reduce
 
-#TODO: transformer a lista de transformers antes de guardar
 class Orchestrator():
-    def __init__(self, reader: Reader, transformer: Transformer, writer: Writer):
+    def __init__(self, reader: Reader, transformers: list[Transformer], writer: Writer):
         self._reader = reader
-        self._transformer = transformer
+        self._transformers = transformers
         self._writer = writer
 
-    def run(self):
-        for chunk in self._reader.read():
-            cleaned_chunk = self._transformer.transform(chunk)
-            self._writer.write(cleaned_chunk)
+    def run(self, input_file_path: Path, output_file_path: Path):
+        for chunk in self._reader.read(input_file_path):
+            cleaned_chunk = reduce(
+                lambda data, transformer: transformer.transform(data),
+                self._transformers,
+                chunk
+            )
+
+            self._writer.write(cleaned_chunk, output_file_path)
