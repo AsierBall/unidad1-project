@@ -1,5 +1,6 @@
 import pytest
 import pandas as pd
+import logging
 
 from unidad1_project import (TransformerMissing,
     TransformerMissingThreshold,
@@ -44,14 +45,32 @@ from unidad1_project import (TransformerMissing,
         "all missing values in both columns"
     ]
 )
-def test_transformer_missing(record, expected_valid):
+def test_transformer_missing(caplog, record, expected_valid):
+    """Test TransformerMissing with log verification."""
+    caplog.set_level(logging.DEBUG)
+
     transformer = TransformerMissing()
     result = transformer.transform(record)
+
+    # Verify DataFrame transformation
     pd.testing.assert_frame_equal(
         result.reset_index(drop=True),
         expected_valid.reset_index(drop=True),
         check_dtype=False
     )
+
+    # Verify logs
+    assert "TransformerMissing: Processing DataFrame with shape" in caplog.text
+    assert "TransformerMissing: Total missing values:" in caplog.text
+
+    if len(result) < len(record):
+        assert "TransformerMissing: Removed" in caplog.text
+        assert "rows" in caplog.text
+    else:
+        assert "TransformerMissing: No rows removed (no missing values found)" in caplog.text
+
+    assert "TransformerMissing: Output shape" in caplog.text
+
 
 @pytest.mark.parametrize(
     "record, threshold, expected_valid",
@@ -90,14 +109,48 @@ def test_transformer_missing(record, expected_valid):
         "threshold_0.5_four_columns"
     ]
 )
-def test_transformer_missing_threshold(record, threshold, expected_valid):
+def test_transformer_missing_threshold(caplog, record, threshold, expected_valid):
+    """Test TransformerMissingThreshold with log verification."""
+    caplog.set_level(logging.DEBUG)
+
     transformer = TransformerMissingThreshold(threshold)
+
+    # Verify initialization log
+    assert f"TransformerMissingThreshold initialized with threshold={threshold}" in caplog.text
+
+    caplog.clear()
     result = transformer.transform(record)
+
+    # Verify DataFrame transformation
     pd.testing.assert_frame_equal(
         result.reset_index(drop=True),
         expected_valid.reset_index(drop=True),
         check_dtype=False
     )
+
+    # Verify transform logs
+    assert "TransformerMissingThreshold: Processing DataFrame with shape" in caplog.text
+    assert f"TransformerMissingThreshold: Threshold={threshold}" in caplog.text
+    assert "columns=" in caplog.text
+    assert "min_non_null=" in caplog.text
+
+    if len(result) < len(record):
+        assert "TransformerMissingThreshold: Removed" in caplog.text
+    else:
+        assert "TransformerMissingThreshold: No rows removed" in caplog.text
+
+    assert "TransformerMissingThreshold: Output shape" in caplog.text
+
+
+def test_transformer_missing_threshold_invalid_threshold(caplog):
+    """Test TransformerMissingThreshold with invalid threshold."""
+    caplog.set_level(logging.WARNING)
+
+    with pytest.raises(ValueError, match="Threshold must be between 0.0 and 1.0"):
+        TransformerMissingThreshold(1.5)
+
+    # Verify warning log was generated
+    assert "TransformerMissingThreshold: Threshold 1.5 is outside recommended range" in caplog.text
 
 
 @pytest.mark.parametrize(
@@ -137,14 +190,35 @@ def test_transformer_missing_threshold(record, threshold, expected_valid):
         "multiple_string_columns"
     ]
 )
-def test_transformer_normalize_strings(record, expected_valid):
+def test_transformer_normalize_strings(caplog, record, expected_valid):
+    """Test TransformerNormalizeStrings with log verification."""
+    caplog.set_level(logging.DEBUG)
+
     transformer = TransformerNormalizeStrings()
     result = transformer.transform(record)
+
+    # Verify DataFrame transformation
     pd.testing.assert_frame_equal(
         result.reset_index(drop=True),
         expected_valid.reset_index(drop=True),
         check_dtype=False
     )
+
+    # Verify logs
+    assert "TransformerNormalizeStrings: Processing DataFrame with shape" in caplog.text
+
+    string_columns = record.select_dtypes(include='str').columns.tolist()
+
+    if not string_columns:
+        assert "TransformerNormalizeStrings: No string columns found to normalize" in caplog.text
+    else:
+        assert f"TransformerNormalizeStrings: Normalizing {len(string_columns)}" in caplog.text
+        assert "string columns:" in caplog.text
+        assert "TransformerNormalizeStrings: Successfully normalized all string columns" in caplog.text
+
+        # Verify each column was logged
+        for col in string_columns:
+            assert f"TransformerNormalizeStrings: Processing column '{col}'" in caplog.text
 
 
 @pytest.mark.parametrize(
@@ -184,9 +258,19 @@ def test_transformer_normalize_strings(record, expected_valid):
         "no_missing_values"
     ]
 )
-def test_transformer_impute_missings_numeric(record, strategy, expected_valid):
+def test_transformer_impute_missings_numeric(caplog, record, strategy, expected_valid):
+    """Test TransformerImputeMissingsNumeric with log verification."""
+    caplog.set_level(logging.DEBUG)
+
     transformer = TransformerImputeMissingsNumeric(strategy)
+
+    # Verify initialization log
+    assert f"TransformerImputeMissingsNumeric initialized with strategy='{strategy}'" in caplog.text
+
+    caplog.clear()
     result = transformer.transform(record)
+
+    # Verify DataFrame transformation
     pd.testing.assert_frame_equal(
         result.reset_index(drop=True),
         expected_valid.reset_index(drop=True),
@@ -194,12 +278,39 @@ def test_transformer_impute_missings_numeric(record, strategy, expected_valid):
         atol=1e-5
     )
 
+    # Verify transform logs
+    assert "TransformerImputeMissingsNumeric: Processing DataFrame with shape" in caplog.text
+    assert "TransformerImputeMissingsNumeric: Found" in caplog.text
+    assert "numeric columns" in caplog.text
 
-def test_transformer_impute_missings_numeric_invalid_strategy():
+    numeric_cols = record.select_dtypes(include='number').columns.tolist()
+    missing_before = record[numeric_cols].isnull().sum().sum() if numeric_cols else 0
+
+    if missing_before == 0:
+        assert "TransformerImputeMissingsNumeric: No missing values in numeric columns" in caplog.text
+    else:
+        assert f"TransformerImputeMissingsNumeric: Imputing {missing_before}" in caplog.text
+        assert f"using {strategy} strategy" in caplog.text
+        assert "TransformerImputeMissingsNumeric: Successfully imputed" in caplog.text
+
+
+def test_transformer_impute_missings_numeric_invalid_strategy(caplog):
+    """Test TransformerImputeMissingsNumeric with invalid strategy."""
+    caplog.set_level(logging.ERROR)
+
     transformer = TransformerImputeMissingsNumeric('invalid')
+
+    # Verify error log during initialization
+    assert "TransformerImputeMissingsNumeric: Invalid strategy 'invalid'" in caplog.text
+
+    caplog.clear()
     data = pd.DataFrame({'A': [1, 2, None]})
+
     with pytest.raises(ValueError, match="Unknown imputation strategy: invalid"):
         transformer.transform(data)
+
+    # Verify error log during transform
+    assert "TransformerImputeMissingsNumeric: Unknown strategy 'invalid'" in caplog.text
 
 
 @pytest.mark.parametrize(
@@ -237,18 +348,76 @@ def test_transformer_impute_missings_numeric_invalid_strategy():
         "default_strategy_numeric_value"
     ]
 )
-def test_transformer_impute_missings_string(record, strategy, default_value, expected_valid):
+def test_transformer_impute_missings_string(caplog, record, strategy, default_value, expected_valid):
+    """Test TransformerImputeMissingsString with log verification."""
+    caplog.set_level(logging.DEBUG)
+
     transformer = TransformerImputeMissingsString(strategy, default_value)
+
+    # Verify initialization log
+    assert f"TransformerImputeMissingsString initialized with strategy='{strategy}'" in caplog.text
+    assert f"default_value={default_value}" in caplog.text
+
+    # Check for warning if default strategy with None value
+    if strategy == 'default' and default_value is None:
+        assert "TransformerImputeMissingsString: Using 'default' strategy with default_value=None" in caplog.text
+
+    caplog.clear()
     result = transformer.transform(record)
+
+    # Verify DataFrame transformation
     pd.testing.assert_frame_equal(
         result.reset_index(drop=True),
         expected_valid.reset_index(drop=True),
         check_dtype=False
     )
 
+    # Verify transform logs
+    assert "TransformerImputeMissingsString: Processing DataFrame with shape" in caplog.text
+    assert "TransformerImputeMissingsString: Found" in caplog.text
+    assert "object/string columns" in caplog.text
 
-def test_transformer_impute_missings_string_invalid_strategy():
+    string_cols = record.select_dtypes(include=['object', 'string']).columns.tolist()
+    missing_before = record[string_cols].isnull().sum().sum() if string_cols else 0
+
+    if missing_before == 0:
+        assert "TransformerImputeMissingsString: No missing values in string columns" in caplog.text
+    else:
+        assert f"TransformerImputeMissingsString: Imputing {missing_before}" in caplog.text
+
+        if strategy == 'mode':
+            assert "using mode strategy" in caplog.text
+        elif strategy == 'default':
+            assert f"with default value: '{default_value}'" in caplog.text
+
+        assert "TransformerImputeMissingsString: Successfully imputed" in caplog.text
+
+
+def test_transformer_impute_missings_string_invalid_strategy(caplog):
+    """Test TransformerImputeMissingsString with invalid strategy."""
+    caplog.set_level(logging.ERROR)
+
     transformer = TransformerImputeMissingsString('invalid')
+
+    # Verify error log during initialization
+    assert "TransformerImputeMissingsString: Invalid strategy 'invalid'" in caplog.text
+
+    caplog.clear()
     data = pd.DataFrame({'A': ['a', 'b', None]})
+
     with pytest.raises(ValueError, match="Unknown imputation strategy: invalid"):
         transformer.transform(data)
+
+    # Verify error log during transform
+    assert "TransformerImputeMissingsString: Unknown strategy 'invalid'" in caplog.text
+
+
+def test_transformer_impute_missings_string_default_none_warning(caplog):
+    """Test warning when using default strategy with None value."""
+    caplog.set_level(logging.WARNING)
+
+    TransformerImputeMissingsString('default', None)
+
+    # Verify warning was logged
+    assert "TransformerImputeMissingsString: Using 'default' strategy with default_value=None" in caplog.text
+    assert "may not produce expected results" in caplog.text
