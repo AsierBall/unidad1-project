@@ -191,6 +191,7 @@ class TransformerImputeMissingsNumeric(Transformer):
                 f"TransformerImputeMissingsNumeric: Invalid strategy '{strategy}'. "
                 f"Valid options: {valid_strategies}"
             )
+            raise ValueError("Strategy must be one of 'mean', 'median', or 'mode'.")
 
     def transform(self, data: pd.DataFrame) -> pd.DataFrame:
         """
@@ -292,6 +293,7 @@ class TransformerImputeMissingsString(Transformer):
                 f"TransformerImputeMissingsString: Invalid strategy '{strategy}'. "
                 f"Valid options: {valid_strategies}"
             )
+            raise ValueError("Strategy must be one of 'mode' or 'default'.")
 
         if strategy == 'default' and default_value is None:
             logger.warning(
@@ -475,9 +477,9 @@ class TransformerFilterRows(Transformer):
 
             return result
 
-        except Exception:
+        except Exception as e:
             logger.exception("TransformerFilterRows: Error during filtering")
-            raise
+            raise e
 
 class TransformerSelectColumns(Transformer):
     """
@@ -578,7 +580,7 @@ class TransformerSelectColumns(Transformer):
 class TransformerGroupByAggregate(Transformer):
     """
     Transformer that performs group-by aggregations.
-    
+
     Groups data by specified columns and applies aggregation functions.
     """
 

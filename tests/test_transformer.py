@@ -302,19 +302,11 @@ def test_transformer_impute_missings_numeric_invalid_strategy(caplog):
     """Test TransformerImputeMissingsNumeric with invalid strategy."""
     caplog.set_level(logging.ERROR)
 
-    transformer = TransformerImputeMissingsNumeric('invalid')
+    with pytest.raises(ValueError, match="Strategy must be one of 'mean', 'median', or 'mode'."):
+        TransformerImputeMissingsNumeric('invalid')
 
     # Verify error log during initialization
     assert "TransformerImputeMissingsNumeric: Invalid strategy 'invalid'" in caplog.text
-
-    caplog.clear()
-    data = pd.DataFrame({'A': [1, 2, None]})
-
-    with pytest.raises(ValueError, match="Unknown imputation strategy: invalid"):
-        transformer.transform(data)
-
-    # Verify error log during transform
-    assert "TransformerImputeMissingsNumeric: Unknown strategy 'invalid'" in caplog.text
 
 
 @pytest.mark.parametrize(
@@ -401,19 +393,11 @@ def test_transformer_impute_missings_string_invalid_strategy(caplog):
     """Test TransformerImputeMissingsString with invalid strategy."""
     caplog.set_level(logging.ERROR)
 
-    transformer = TransformerImputeMissingsString('invalid')
+    with pytest.raises(ValueError, match="Strategy must be one of 'mode' or 'default'."):
+        TransformerImputeMissingsString('invalid')
 
     # Verify error log during initialization
     assert "TransformerImputeMissingsString: Invalid strategy 'invalid'" in caplog.text
-
-    caplog.clear()
-    data = pd.DataFrame({'A': ['a', 'b', None]})
-
-    with pytest.raises(ValueError, match="Unknown imputation strategy: invalid"):
-        transformer.transform(data)
-
-    # Verify error log during transform
-    assert "TransformerImputeMissingsString: Unknown strategy 'invalid'" in caplog.text
 
 
 def test_transformer_impute_missings_string_default_none_warning(caplog):
