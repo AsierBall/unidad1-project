@@ -17,9 +17,10 @@ setup_logging(
 )
 
 __all__ = [
-    "CSVReader",
-    "TransformerMissing",
+    "Reader",
+    "JSONReaderPandas",
     "CSVReaderPandas",
+    "TransformerMissing",
     "WriterCsv",
     "Orchestrator",
     "Transformer",
