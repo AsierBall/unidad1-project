@@ -6,8 +6,10 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class Reader(Protocol):
     """A reader class that reads a file"""
+
     def read(self, file_path: Path) -> Generator:
         """function that reads a file as a generator
 
@@ -17,6 +19,7 @@ class Reader(Protocol):
         :rtype: Generator
         """
         ...
+
 
 class CSVReaderPandas:
     """
@@ -44,7 +47,7 @@ class CSVReaderPandas:
         :raises ValueError: If the file is empty or the function can't determine the delimitator.
         """
         try:
-            with open(file_path, 'r', newline='', encoding='utf-8') as f:
+            with open(file_path, "r", newline="", encoding="utf-8") as f:
                 sample = f.read(4096)
                 if not sample.strip():
                     raise ValueError(f"The file '{file_path}' is empty.")
@@ -73,7 +76,7 @@ class CSVReaderPandas:
         if not file_path.exists():
             raise FileNotFoundError(f"File not found: '{file_path}'")
 
-        if file_path.suffix.lower() != '.csv':
+        if file_path.suffix.lower() != ".csv":
             logger.warning(f"The file extension for '{file_path.name}' is not .csv")
 
         try:
@@ -88,8 +91,8 @@ class CSVReaderPandas:
                 chunksize=self._chunk_size,
                 sep=delimiter,
                 # TODO: add a Callable to log row errors
-                on_bad_lines='warn'
-                )
+                on_bad_lines="warn",
+            )
 
             for chunk in reader_obj:
                 yield chunk
@@ -112,7 +115,6 @@ class JSONReaderPandas:
     compatibility with the Reader protocol.
     """
 
-
     def read(self, file_path: Path) -> Generator:
         """
         Reads the JSON file and yields it as a DataFrame fragment.
@@ -131,7 +133,7 @@ class JSONReaderPandas:
         if not file_path.exists():
             raise FileNotFoundError(f"File not found: '{file_path}'")
 
-        if file_path.suffix.lower() != '.json':
+        if file_path.suffix.lower() != ".json":
             logger.warning(f"The file extension for '{file_path.name}' is not .json")
 
         try:
