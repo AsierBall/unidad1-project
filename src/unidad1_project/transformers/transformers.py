@@ -81,7 +81,7 @@ class TransformerMissingThreshold(Transformer):
         )
 
         if not 0.0 <= threshold <= 1.0:
-            logger.warning(
+            logger.error(
                 f"TransformerMissingThreshold: Threshold {threshold} is outside "
                 f"recommended range [0.0, 1.0]"
             )
