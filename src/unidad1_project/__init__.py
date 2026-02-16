@@ -1,12 +1,12 @@
 from pathlib import Path
-from .readers import CSVReader, CSVReaderPandas
+from .readers import CSVReaderPandas, JSONReaderPandas, Reader
 from .transformers import (Transformer,
     TransformerMissing,
     TransformerMissingThreshold,
     TransformerNormalizeStrings,
     TransformerImputeMissingsNumeric,
     TransformerImputeMissingsString)
-from .writers import WriterCsv
+from .writers import WriterCsv, Writer
 from .orchestrator import Orchestrator
 from .logging import setup_logging
 
@@ -22,6 +22,7 @@ __all__ = [
     "CSVReaderPandas",
     "TransformerMissing",
     "WriterCsv",
+    "Writer",
     "Orchestrator",
     "Transformer",
     "TransformerMissingThreshold",
