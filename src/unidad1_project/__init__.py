@@ -1,5 +1,5 @@
 from pathlib import Path
-from .readers import CSVReaderPandas, JSONReaderPandas, Reader
+from .readers import ReaderCsv, ReaderJson, Reader
 from .transformers import (Transformer,
     TransformerMissing,
     TransformerMissingThreshold,
@@ -22,8 +22,8 @@ setup_logging(
 
 __all__ = [
     "Reader",
-    "JSONReaderPandas",
-    "CSVReaderPandas",
+    "ReaderJson",
+    "ReaderCsv",
     "TransformerMissing",
     "WriterCsv",
     "Writer",

@@ -2,7 +2,7 @@ import pytest
 from pathlib import Path
 import json
 
-from unidad1_project import Orchestrator, CSVReaderPandas, JSONReaderPandas, WriterCsv, WriterJson, \
+from unidad1_project import Orchestrator, ReaderCsv, ReaderJson, WriterCsv, WriterJson, \
     TransformerMissing, TransformerNormalizeStrings
 
 @pytest.fixture
@@ -35,7 +35,7 @@ class TestE2E:
         output_path = tmp_path / "out.csv"
 
         orchestrator = Orchestrator(
-            reader = CSVReaderPandas(chunk_size=100),
+            reader = ReaderCsv(chunk_size=100),
             transformers = [
                 TransformerMissing(),
                 TransformerNormalizeStrings(),
@@ -56,7 +56,7 @@ class TestE2E:
         output_path = tmp_path / "out.json"
 
         orchestrator = Orchestrator(
-            reader = JSONReaderPandas(),
+            reader = ReaderJson(),
             transformers = [
                 TransformerMissing(),
                 TransformerNormalizeStrings(),
