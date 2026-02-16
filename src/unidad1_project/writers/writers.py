@@ -14,12 +14,14 @@ class Writer(Protocol):
 
 class WriterCsv(Writer):
     def __init__(self, file_path: Path):
-        # TODO: logica comprobacion `file_path`
-        #       - si el archivo ya existe
-        #           - comprobar si esta vacio
-        #               - si lo esta nada
-        #               - si tiene contenido levantar error
-        #       - ¿? revisar las columnas del archivo (numero, nombre...) ¿?
+        """
+        CSV implementation of the Writer interface.
+
+        - Creates the file if it does not exist.
+        - Appends data if it exists.
+        - Validates column consistency before appending.
+        """
+
         self._file_path = file_path
 
 
