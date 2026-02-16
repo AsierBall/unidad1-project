@@ -1,5 +1,4 @@
-from .logging import PipelineLogger
+"""Logging module for centralized logging configuration."""
+from .logging import setup_logging, get_logger
 
-__all__ = [
-    "PipelineLogger"
-]
+__all__ = ["setup_logging", "get_logger"]
