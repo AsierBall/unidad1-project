@@ -33,6 +33,13 @@ class Orchestrator():
         :type output_file_path: Path
         """
         index = 0
+        """runs the data stream from reading to writing
+
+        :param input_file_path: path to the input file
+        :type input_file_path: Path
+        :param output_file_path: path to the output file
+        :type output_file_path: Path
+        """
         for chunk in self._reader.read(input_file_path):
             cleaned_chunk = reduce(
                 lambda data, transformer: transformer.transform(data),
