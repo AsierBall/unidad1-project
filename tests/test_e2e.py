@@ -1,12 +1,9 @@
 import pytest
 from pathlib import Path
-import pandas as pd
 import json
 
 from unidad1_project import Orchestrator, CSVReaderPandas, WriterCsv, WriterJson, \
     TransformerMissing, TransformerNormalizeStrings
-from unidad1_project.readers.readers import JSONReaderPandas
-from unidad1_project.writers.writers import WriterJson
 
 @pytest.fixture
 def csv_path():
