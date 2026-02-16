@@ -1,11 +1,12 @@
 import pytest
+import pandas as pd
 from pathlib import Path
 from unidad1_project import Orchestrator, Transformer, Reader, Writer# Ajusta la importación
 
 # --- Mocks Manuales (Reutilizables) ---
 
 class MockReader(Reader):
-    def read(self, path):
+    def read(self, file_path: Path):
         for chunk in range(10):
             yield chunk
 
@@ -14,7 +15,7 @@ class MockTransformer(Transformer):
         return data
 
 class MockWriter(Writer):
-    def write(self, path):
+    def write(self, data_frame: pd.DataFrame, file_path: Path):
         pass
 
 # --- Fixtures para inicializar el escenario ---
@@ -28,7 +29,8 @@ def output_path(): return Path("out.txt")
 # --- Tests Atómicos ---
 
 class TestOrchestratorFlow:
-    def test_run_execution(self, input_path, output_path):
+    def test_run_execution(self, input_path, output_path, caplog):
+        """Tests the pipeline execution and its logging"""
         reader = MockReader()
         transformer = MockTransformer()
         writer = MockWriter()
@@ -40,3 +42,5 @@ class TestOrchestratorFlow:
         )
 
         orchestrator.run(input_path, output_path)
+
+        assert "chunk 1 processed" in caplog.text
